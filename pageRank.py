@@ -22,7 +22,7 @@ def addifin(list, nummer):
 
 
 sc = SparkContext("local", "first app")
-
+start_of_program=time.time()
 logFile="web-Google.txt"
 rd=sc.textFile(logFile)
 
@@ -35,7 +35,7 @@ rd = rd.map(lambda x: (int(x.split("\t")[0]),int(x.split("\t")[1])))
 
 rd = rd.groupByKey()
 
-rd = rd.mapValues(lambda x: (list(x)))
+rd = rd.mapValues(lambda x: (list(x))).cache()
 # krijg de N voor de formules
 n=rd.count()
 print(n)
@@ -74,12 +74,9 @@ while val > epsilon:
     diffsquared=diff.mapValues(lambda rank:rank**2)
 
     print("diff", time.time() - startContribs)
-
-    val = diff.values().sum()
+    val = diff.values().max()
     print("NORM N1:", val)
-
     print("NORM N2:", diffsquared.values().reduce(add) ** 0.5)
-    print("NORM N0:", diff.values().reduce(lambda x, y: max(x, y)))
     # sla de huidige ranks op in de oude ri.
     ri = ranks
     time2=time.time()
@@ -87,10 +84,10 @@ while val > epsilon:
     start_time=time2
 
 #probeer te sorteren op key, geen idee waarom da nie werkt stackoverflow zegt dat da werkt :(
-ranks.coalesce(1)
-ranks.sortBy(lambda a:a)
-
+print("iteration {} zorgt voor een epsilon van {}".format(iter,epsilon))
 #schrijf naar csv
-lines=ranks.map(lambda x: ','.join(str(d) for d in x))
+lines=ranks.coalesce(1,False).sortBy(lambda a:a[1],False,1)
+print(lines.collect()[:10])
 #verwijder de ranks.csv folder elke keer dat je dit runt anders geeft deze lijn errors
-lines.saveAsTextFile("ranks.csv")
+lines.coalesce(1,False).saveAsTextFile("ranks.csv")
+print("total time of program: ",time.time()-start_of_program)
