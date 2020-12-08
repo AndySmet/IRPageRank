@@ -1,8 +1,8 @@
-from pyspark import SparkContext, StorageLevel
-from operator import add, sub
+from pyspark import SparkContext
 import time
-from functools import reduce
-import re
+import os
+import shutil
+
 
 def computeRankScore(outlinks, PR, di):
     totalOutlinks = len(outlinks)
@@ -20,11 +20,22 @@ def addifin(list, nummer):
     # else:
     return list + [nummer]
 
-
-sc = SparkContext("local", "first app")
+try:
+    shutil.rmtree('ranks.csv')
+except:
+    pass
+try:
+    os.remove('pageranking.csv')
+except:
+    pass
+sc = SparkContext("local[*]", "first app")
+print(sc.uiWebUrl)
 start_of_program=time.time()
-logFile="web-Google.txt"
+# logFile="web-Google.txt"
+logFile="pipe.txt"
+
 rd=sc.textFile(logFile)
+
 
 # maak een RDD met values 0 .... en indexen die de edges weergeven van het voorbeeld in de slides (yahoo amazon en microsoft)
 # rd = sc.parallelize(["0 2 6 7 8 9 10 1","" ,"0 2 3", "2 5"]).zipWithIndex()
@@ -32,9 +43,9 @@ rd=sc.textFile(logFile)
 
 #initial maps en group om de data in juist formaat te krijgen (id , lijst van IDS)
 rd = rd.map(lambda x: (int(x.split("\t")[0]),int(x.split("\t")[1])))
-
+values=rd.values().distinct().map(lambda x:(x,x))
+rd = rd.union(values).distinct()
 rd = rd.groupByKey()
-
 rd = rd.mapValues(lambda x: (list(x))).cache()
 # krijg de N voor de formules
 n=rd.count()
@@ -47,7 +58,7 @@ ranks = rd.mapValues(lambda x: 1.0 / n)
 # print(rd.join(ranks).collect())
 # initializeer waardes die gebruikt worden in formules b = teleportwaarde Beta
 b = 0.85
-epsilon = 0.00001
+epsilon = 1e-6
 
 # initializeer val > 1 en iteratie count op 0 en previousrank ri op de 1/n rank scores
 val = 2
@@ -59,7 +70,7 @@ ri = ranks
 # er zijn 3 normen die hier staan N0= maximum fout  N1= som van absolute fouten N2= wortel van alle fouten **2
 start_time=time.time()
 while val > epsilon:
-
+    break
     iter += 1
 
     # join rd en ranks zodat de links ranks en scores samen in een RDD zitten en mappen de scores in een nieuwe RDD
@@ -78,16 +89,29 @@ while val > epsilon:
     print("NORM N1:", val)
     print("NORM N2:", diffsquared.values().reduce(add) ** 0.5)
     # sla de huidige ranks op in de oude ri.
+
     ri = ranks
     time2=time.time()
     print("iteration {} duurt ".format(iter),time2-start_time)
     start_time=time2
 
-#probeer te sorteren op key, geen idee waarom da nie werkt stackoverflow zegt dat da werkt :(
+#sorteer op value, coalesce zorgt ervoor dat er 1 partitie is false= shuffling=false zodat er niets geshuffled word
 print("iteration {} zorgt voor een epsilon van {}".format(iter,epsilon))
 #schrijf naar csv
 lines=ranks.coalesce(1,False).sortBy(lambda a:a[1],False,1)
-print(lines.collect()[:10])
-#verwijder de ranks.csv folder elke keer dat je dit runt anders geeft deze lijn errors
+# nogmaals coalesce voor de zekerheid en save to ranks.csv/part0000 (geen idee waarom ik niet rechtstreeks naar een file kan schrijven :( )
 lines.coalesce(1,False).saveAsTextFile("ranks.csv")
+
+
+#probeer alle gemaakte files op de juiste plaats te zetten en verwijder de ranks.csv directory
+try:
+    shutil.move("ranks.csv/part-00000", "pageranking.csv")
+    try:
+        shutil.rmtree('ranks.csv')
+    except:
+        pass
+
+except:
+    print('U can find it in the ranks.csv directory under part-00000')
 print("total time of program: ",time.time()-start_of_program)
+
