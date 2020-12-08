@@ -2,6 +2,7 @@ from pyspark import SparkContext
 import time
 import os
 import shutil
+from operator import add
 
 
 def computeRankScore(outlinks, PR, di):
@@ -10,15 +11,6 @@ def computeRankScore(outlinks, PR, di):
     # yield is de emit in de slides, das eigenlijk een return die de toestand van de functie bijhoudt en de volgende keer start bij yield in plaats van het begin van de functie
     for link in outlinks:
         yield (link, PR / totalOutlinks)
-
-
-
-# functie die word gebruikt als we iets gaan doen met sink nodes word nu nog niet echt gebruikt
-def addifin(list, nummer):
-    # if nummer in list:
-    return list
-    # else:
-    return list + [nummer]
 
 try:
     shutil.rmtree('ranks.csv')
@@ -31,8 +23,7 @@ except:
 sc = SparkContext("local[*]", "first app")
 print(sc.uiWebUrl)
 start_of_program=time.time()
-# logFile="web-Google.txt"
-logFile="pipe.txt"
+logFile="web-Google.txt"
 
 rd=sc.textFile(logFile)
 
@@ -70,7 +61,7 @@ ri = ranks
 # er zijn 3 normen die hier staan N0= maximum fout  N1= som van absolute fouten N2= wortel van alle fouten **2
 start_time=time.time()
 while val > epsilon:
-    break
+
     iter += 1
 
     # join rd en ranks zodat de links ranks en scores samen in een RDD zitten en mappen de scores in een nieuwe RDD
