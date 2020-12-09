@@ -17,7 +17,7 @@ try:
 except:
     pass
 try:
-    os.remove('pageranking.csv')
+    os.remove('pagerank_list.csv')
 except:
     pass
 sc = SparkContext("local[*]", "first app")
@@ -96,7 +96,7 @@ lines.coalesce(1,False).saveAsTextFile("ranks.csv")
 
 #probeer alle gemaakte files op de juiste plaats te zetten en verwijder de ranks.csv directory
 try:
-    shutil.move("ranks.csv/part-00000", "pageranking.csv")
+    shutil.move("ranks.csv/part-00000", "pagerank_list.csv")
     try:
         shutil.rmtree('ranks.csv')
     except:
