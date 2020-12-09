@@ -24,10 +24,7 @@ sc = SparkContext("local[*]", "first app")
 print(sc.uiWebUrl)
 start_of_program=time.time()
 logFile="web-Google.txt"
-
 rd=sc.textFile(logFile)
-
-
 # maak een RDD met values 0 .... en indexen die de edges weergeven van het voorbeeld in de slides (yahoo amazon en microsoft)
 # rd = sc.parallelize(["0 2 6 7 8 9 10 1","" ,"0 2 3", "2 5"]).zipWithIndex()
 # switch de values en keys zodat de keys de page zelf is en de values de edges
@@ -48,7 +45,7 @@ ranks = rd.mapValues(lambda x: 1.0 / n)
 # print(ranks.collect())
 # print(rd.join(ranks).collect())
 # initializeer waardes die gebruikt worden in formules b = teleportwaarde Beta
-b = 0.85
+b = 0.5
 epsilon = 1e-6
 
 # initializeer val > 1 en iteratie count op 0 en previousrank ri op de 1/n rank scores
@@ -60,6 +57,7 @@ ri = ranks
 # epsilon is het verschil in rankscores nu en vorige iteratie
 # er zijn 3 normen die hier staan N0= maximum fout  N1= som van absolute fouten N2= wortel van alle fouten **2
 start_time=time.time()
+timetable={}
 while val > epsilon:
 
     iter += 1
@@ -76,9 +74,14 @@ while val > epsilon:
     diffsquared=diff.mapValues(lambda rank:rank**2)
 
     print("diff", time.time() - startContribs)
-    val = diff.values().max()
-    print("NORM N1:", val)
-    print("NORM N2:", diffsquared.values().reduce(add) ** 0.5)
+    ninf = diff.values().max()
+    n1=diff.values().sum()
+    n2=diffsquared.values().reduce(add) ** 0.5
+    val=n1
+    timetable[iter]=[ninf,n1,n2]
+    print("NORM N1:", n1)
+    print("NORM Ninf:", ninf)
+    print("NORM N2:", n2)
     # sla de huidige ranks op in de oude ri.
 
     ri = ranks
@@ -93,7 +96,22 @@ lines=ranks.coalesce(1,False).sortBy(lambda a:a[1],False,1)
 # nogmaals coalesce voor de zekerheid en save to ranks.csv/part0000 (geen idee waarom ik niet rechtstreeks naar een file kan schrijven :( )
 lines.coalesce(1,False).saveAsTextFile("ranks.csv")
 
+#store a timetable of norms and a ratios of norm to check for growth rates
+stringske="timetable : \n"
+stringratios="ratios :\n"
+t=[1,1,1]
+for i in timetable:
+    string2="time {} {} \n".format(i,timetable[i])
+    stringratios+="time {} {}\n".format(i,[timetable[i][0]/t[0],timetable[i][1]/t[1],timetable[i][2]/t[2]])
+    t=timetable[i]
+    stringske+=string2
 
+a=open("timetable.txt","w")
+r=open("ratios.txt","w")
+a.write(stringske)
+r.write(stringratios)
+a.close()
+r.close()
 #probeer alle gemaakte files op de juiste plaats te zetten en verwijder de ranks.csv directory
 try:
     shutil.move("ranks.csv/part-00000", "pagerank_list.csv")
