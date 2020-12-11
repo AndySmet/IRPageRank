@@ -41,8 +41,8 @@ def pageRank(filename,beta,epsilon,allnorms=False,commonsolution=False):
         else:
             rd = sc.textFile(filename).zipWithIndex()
             rd = rd.map(
-                lambda x: (x[1], list(filter(lambda z: z < 50e6, [int(z) for z in x[0].split()]))).filter(
-                lambda x: x[0] < 50e6))
+                lambda x: (x[1], list(filter(lambda z: z < 50e6, [int(z) for z in x[0].split()])))).filter(
+                lambda x: x[0] < 50e6)
 
         #initialize incoming links for sink nodes
         m2=rd.flatMapValues(lambda x:x).map(lambda x:(x[1],x[0])).groupByKey()
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     #epsilon, value for convergence calculations
     #allnorms, True means 3 norms will be calculated and a timetable will be generated, False means only Ninf norm will be used and no timetable will be generated
     #commonsolution,True means using the backlink method to fix sinknodes, false means giving every node a link to itself, if it doesn't have one already
-    pageRank("web-Google.txt",0.85,1e-6,True,True)
+    pageRank("ClueWeb09_WG_50m.graph-txt",0.85,1e-6,False,True)
 
     # move and remove the files that are not needed anymore and print the total time it took for the program to run.
     try:
