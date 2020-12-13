@@ -5,13 +5,13 @@ import shutil
 from operator import add
 
 
-def computeRankScore(outlinks, PR):
+def computeRankScore(outlinks, PR, sourceLink):
 
     # yield is de emit in de slides, das eigenlijk een return die de toestand van de functie bijhoudt en de volgende keer start bij yield in plaats van het begin van de functie
     for link in outlinks:
         yield (link, PR / len(outlinks))
 
-
+    yield (sourceLink, 0)
 
 # functie die word gebruikt als we iets gaan doen met sink nodes word nu nog niet echt gebruikt
 def addifin(list, nummer):
@@ -37,7 +37,7 @@ def pageRank(filename,beta,epsilon,allnorms=False,commonsolution=False):
             rd = sc.textFile(filename)
             rd = rd.map(lambda x: (int(x.split("\t")[0]),int(x.split("\t")[1])))
             rd = rd.groupByKey().cache()
-            rd=rd.mapValues(lambda x:list(x))
+            rd = rd.mapValues(lambda x:list(x))
         else:
             rd = sc.textFile(filename).zipWithIndex()
             rd = rd.map(
@@ -93,16 +93,17 @@ def pageRank(filename,beta,epsilon,allnorms=False,commonsolution=False):
         # the operations match the map and reduce operations given in the lectures very well, so we used it.
         startContribs=time.time()
         contribs = rd.join(ranks).flatMap(
-            lambda url_ranks: computeRankScore(url_ranks[1][0], url_ranks[1][1]))
+            lambda url_ranks: computeRankScore(url_ranks[1][0], url_ranks[1][1], url_ranks[0]))
 
         # contribs now contains a list of tuples in the form of (ID, score) reducebykey will add all these values, this is the summation in the formula
         # the mapvalues will use adjust the rank with the formula rank= rank*b + a/n
 
         ranks = contribs.reduceByKey(add).mapValues(lambda rank: rank * beta + (1 - beta) * 1.0 / n)
-
         # calculate the norms we will use and print the results.
         diff = ranks.join(ri).mapValues(lambda rank: abs(rank[0] - rank[1]))
+
         ninf = diff.values().max()
+
         val = ninf
         if allnorms:
             diffsquared=diff.mapValues(lambda rank:rank**2)
@@ -166,7 +167,7 @@ if __name__ == "__main__":
     #epsilon, value for convergence calculations
     #allnorms, True means 3 norms will be calculated and a timetable will be generated, False means only Ninf norm will be used and no timetable will be generated
     #commonsolution,True means using the backlink method to fix sinknodes, false means giving every node a link to itself, if it doesn't have one already
-    pageRank("ClueWeb09_WG_50m.graph-txt",0.85,1e-6,False,True)
+    pageRank("web-Google.txt",0.50,1e-6,False,False)
 
     # move and remove the files that are not needed anymore and print the total time it took for the program to run.
     try:
