@@ -167,7 +167,7 @@ if __name__ == "__main__":
     #epsilon, value for convergence calculations
     #allnorms, True means 3 norms will be calculated and a timetable will be generated, False means only Ninf norm will be used and no timetable will be generated
     #commonsolution,True means using the backlink method to fix sinknodes, false means giving every node a link to itself, if it doesn't have one already
-    pageRank("web-Google.txt",0.50,1e-6,False,False)
+    pageRank("web-Google.txt",0.85,1e-6,False,False)
 
     # move and remove the files that are not needed anymore and print the total time it took for the program to run.
     try:
